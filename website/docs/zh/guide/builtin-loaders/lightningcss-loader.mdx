@@ -121,6 +121,10 @@ type LightningcssLoaderOptions = {
 };
 ```
 
+### `drafts.customMedia`
+
+将 `drafts.customMedia` 设为 `true` 可解析 `@custom-media` 规则。若要在 loader 处理期间展开自定义媒体查询，还需启用 `include.customMediaQueries`，或配置需要此转换的浏览器目标。定义仅在各自的样式表内解析，因此引用其他 CSS 文件中的定义可能会在 loader 处理期间报错。Lightning CSS 不会展开 `@import` 媒体条件中的自定义媒体查询；loader 会保留这些定义和引用。
+
 ### targets
 
 - **类型：** `string | string[] | Targets`

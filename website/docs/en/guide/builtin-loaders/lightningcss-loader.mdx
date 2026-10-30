@@ -121,6 +121,10 @@ type LightningcssLoaderOptions = {
 };
 ```
 
+### `drafts.customMedia`
+
+Set `drafts.customMedia` to `true` to parse `@custom-media` rules. To expand custom media queries during loader processing, also enable `include.customMediaQueries` or configure browser targets that require the transform. Definitions are resolved within each stylesheet, so a reference to a definition in another CSS file can fail during loader processing. Custom media used in `@import` media conditions is not expanded by Lightning CSS; the loader preserves those definitions and references.
+
 ### targets
 
 - **Type:** `string | string[] | Targets`
