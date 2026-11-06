@@ -14,7 +14,7 @@ impl SplitChunksPlugin {
     compilation: &Compilation,
     cache_group: &CacheGroup,
     used_chunks: &mut Cow<FxHashSet<ChunkUkey>>,
-  ) {
+  ) -> bool {
     let chunk_db = &compilation.build_chunk_graph_artifact.chunk_by_ukey;
     let chunk_group_db = &compilation.build_chunk_graph_artifact.chunk_group_by_ukey;
     let invalided_chunks = used_chunks
@@ -61,8 +61,10 @@ impl SplitChunksPlugin {
         }
       })
       .collect::<Vec<_>>();
+    let pruned = !invalided_chunks.is_empty();
     invalided_chunks.into_iter().for_each(|c| {
       used_chunks.to_mut().remove(&c);
-    })
+    });
+    pruned
   }
 }
