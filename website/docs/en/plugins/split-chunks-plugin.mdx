@@ -534,9 +534,11 @@ Prevents exposing path info when creating names for parts splitted by maxSize.
 ### splitChunks.maxAsyncRequests
 
 - **Type:** `number`
-- **Default:** `30`
+- **Default:** `30` in production and `Infinity` in other modes
 
 Maximum number of parallel requests when on-demand loading.
+
+Cache groups inherit this limit unless they set their own `maxAsyncRequests` or enable `enforce`. An explicit cache group limit still applies with `enforce: true`.
 
 ### splitChunks.maxAsyncSize
 
@@ -549,9 +551,11 @@ The difference between `maxAsyncSize` and `maxSize` is that `maxAsyncSize` will 
 ### splitChunks.maxInitialRequests
 
 - **Type:** `number`
-- **Default:** `30`
+- **Default:** `30` in production and `Infinity` in other modes
 
 Maximum number of parallel requests at an entry point.
+
+Cache groups inherit this limit unless they set their own `maxInitialRequests` or enable `enforce`. An explicit cache group limit still applies with `enforce: true`.
 
 ### splitChunks.maxInitialSize
 

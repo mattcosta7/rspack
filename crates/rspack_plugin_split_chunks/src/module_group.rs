@@ -718,11 +718,42 @@ fn get_named_group_size_reduction(
     .sum()
 }
 
+fn bypasses_request_cap(
+  group: &mut ModuleGroup,
+  cache_groups: &[CacheGroup],
+  module_sizes: &ModuleSizes,
+) -> bool {
+  let threshold = &cache_groups[group.cache_group_index as usize].enforce_size_threshold;
+  threshold.values().any(|size| *size > 0.0)
+    && !group.get_sizes(module_sizes).smaller_than(threshold)
+}
+
 pub(crate) fn compare_entries(
   (a_key, a): (&ModuleGroupKey, &mut ModuleGroup),
   (b_key, b): (&ModuleGroupKey, &mut ModuleGroup),
   module_sizes: &ModuleSizes,
+  density: Option<(&[CacheGroup], bool)>,
 ) -> f64 {
+  if let Some((cache_groups, defer_bypass)) = density {
+    if defer_bypass {
+      // Groups above `enforceSizeThreshold` split regardless of the request cap, so spend the
+      // remaining budget on the groups that need it first.
+      let a_bypass = bypasses_request_cap(a, cache_groups, module_sizes);
+      let b_bypass = bypasses_request_cap(b, cache_groups, module_sizes);
+      if a_bypass != b_bypass {
+        return if a_bypass { -1.0 } else { 1.0 };
+      }
+    }
+    let _ = a.get_sizes(module_sizes);
+    let _ = b.get_sizes(module_sizes);
+    // Each split costs one request per chunk it is shared by.
+    let a_density = a.get_size_reduction(module_sizes) / a.chunks.len().max(1) as f64;
+    let b_density = b.get_size_reduction(module_sizes) / b.chunks.len().max(1) as f64;
+    let diff_density = a_density - b_density;
+    if diff_density != 0f64 {
+      return diff_density;
+    }
+  }
   // 1. by priority
   // no need to compare priority anymore because we already pick all cache groups with same priority
   // let diff_priority = a.cache_group_priority - b.cache_group_priority;

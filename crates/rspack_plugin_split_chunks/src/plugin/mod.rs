@@ -188,6 +188,13 @@ impl SplitChunksPlugin {
     let native_matches =
       self.prepare_native_cache_group_matches(&all_modules, &stages, compilation);
     let priority_len = priority_cache_groups.len();
+    // Experimental, for discussion: once a request cap prunes a split, rank remaining candidates by
+    // bytes saved per request instead of by chunk count. `RSPACK_SC_DENSITY=2` also ranks groups
+    // above `enforceSizeThreshold` last.
+    let density_mode = std::env::var("RSPACK_SC_DENSITY").ok();
+    let defer_bypass = density_mode.as_deref() == Some("2");
+    let density_mode = density_mode.is_some();
+    let mut cap_bound = false;
     for (index, ((_, cache_groups), native_matches)) in priority_cache_groups
       .into_iter()
       .zip(native_matches)
@@ -308,9 +315,11 @@ impl SplitChunksPlugin {
         .for_each(|(_, module_group)| module_group.prepare_modules_for_sizes_and_compare());
       self.ensure_min_size_fit(&mut module_group_map, &module_sizes);
 
-      while let Some((module_group_key, mut module_group)) =
-        self.find_best_module_group(&mut module_group_map, &module_sizes)
-      {
+      while let Some((module_group_key, mut module_group)) = self.find_best_module_group(
+        &mut module_group_map,
+        &module_sizes,
+        (density_mode && cap_bound).then_some(defer_bypass),
+      ) {
         tracing::trace!(
           "ModuleGroup({}) wins, {:?} `ModuleGroup` remains",
           module_group_key,
@@ -354,8 +363,10 @@ impl SplitChunksPlugin {
 
         let mut used_chunks = Cow::Borrowed(&module_group.chunks);
 
-        if !enforce_size_exceeded {
-          self.ensure_max_request_fit(compilation, cache_group, &mut used_chunks);
+        if !enforce_size_exceeded
+          && self.ensure_max_request_fit(compilation, cache_group, &mut used_chunks)
+        {
+          cap_bound = true;
         }
 
         // A named group can remove additional copies from chunks selected by its other modules.
